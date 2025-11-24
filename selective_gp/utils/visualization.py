@@ -81,15 +81,41 @@ def plot_deep_latent(model, axes=None, xlims=None, **kwargs):
         plot_latent(gp, ax=ax, xlim=xlim, **kwargs)
 
 
+# def plot_latent(gp, ax=None, xlim=None, resolution=200, cmap=plt.cm.Set1):
+#     if ax is None:
+#         ax = plt.subplots()[1]
+
+#     with torch.no_grad():
+#         x_u = gp.inducing_inputs.clone().flatten()
+#         u = gp.inducing_distribution.mean.clone()
+
+#         p = gp.variational_point_process.probabilities
+#         color = [(0, 0, 0, p_) for p_ in p]
+
+#     ax.scatter(x_u, u, color=color, edgecolor="k")
+
+#     if xlim is None:
+#         xlim = ax.get_xlim()
+
+#     x_ = torch.linspace(*xlim, resolution)
+
+#     with torch.no_grad():
+#         f_dist = gp(x_[:, None])
+
+#     m, s = f_dist.mean, f_dist.stddev
+#     ax.plot(x_, m, color=cmap(1))
+#     ax.fill_between(x_, m - s, m + s, color=cmap(1, 0.3))
 def plot_latent(gp, ax=None, xlim=None, resolution=200, cmap=plt.cm.Set1):
     if ax is None:
         ax = plt.subplots()[1]
 
-    with torch.no_grad():
-        x_u = gp.inducing_inputs.clone().flatten()
-        u = gp.inducing_distribution.mean.clone()
+    device = next(gp.parameters()).device # device 확인
 
-        p = gp.variational_point_process.probabilities
+    with torch.no_grad():
+        x_u = gp.inducing_inputs.clone().flatten().cpu().numpy()
+        u = gp.inducing_distribution.mean.clone().cpu().numpy()
+
+        p = gp.variational_point_process.probabilities.cpu().numpy()
         color = [(0, 0, 0, p_) for p_ in p]
 
     ax.scatter(x_u, u, color=color, edgecolor="k")
@@ -97,14 +123,17 @@ def plot_latent(gp, ax=None, xlim=None, resolution=200, cmap=plt.cm.Set1):
     if xlim is None:
         xlim = ax.get_xlim()
 
-    x_ = torch.linspace(*xlim, resolution)
+    x_ = torch.linspace(*xlim, resolution).to(device)
 
     with torch.no_grad():
         f_dist = gp(x_[:, None])
 
-    m, s = f_dist.mean, f_dist.stddev
-    ax.plot(x_, m, color=cmap(1))
-    ax.fill_between(x_, m - s, m + s, color=cmap(1, 0.3))
+    m = f_dist.mean.cpu().numpy()
+    s = f_dist.stddev.cpu().numpy()
+    x_cpu = x_.cpu().numpy()
+
+    ax.plot(x_cpu, m, color=cmap(1))
+    ax.fill_between(x_cpu, m - s, m + s, color=cmap(1, 0.3))
 
 
 def plot_probabilities(gp, ax=None, color=None):
